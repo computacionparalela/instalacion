@@ -1,0 +1,72 @@
+---
+
+- hosts: all
+  vars:
+    instalar_oneapi: yes
+  tasks:
+    - name: Actualizar listas de paquetes
+      apt:
+        update_cache: yes
+
+    - name: Instalar GCC
+      apt:
+        name:
+          - gcc
+          - g++
+        state: latest
+
+    - name: Instalar Clang
+      apt:
+        name:
+          - clang
+        state: latest
+
+    - name: Instalar Intel oneAPI
+      block:
+        - name: Agregar llave GPG de Intel oneAPI
+          apt_key:
+            url: 'https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB'
+            state: present
+
+        - name: Agregar repositorio de Intel oneAPI
+          apt_repository:
+            repo: 'deb https://apt.repos.intel.com/oneapi all main'
+            state: present
+            filename: oneAPI
+
+        - name: Instalar oneAPI HPCKit (ocupa mucho espacio)
+          apt:
+            name:
+              - intel-hpckit
+            state: latest
+      when: instalar_oneapi
+
+    - name: Instalar otras herramientas
+      apt:
+        name:
+          - build-essential
+          - clang-tools
+          - meson
+          - ninja-build
+          - git
+        state: latest
+
+    - name: Instalar perf en Ubuntu
+      apt:
+        name: linux-tools-generic
+        state: latest
+      when: ansible_distribution == 'Ubuntu'
+
+    - name: Instalar perf en Debian
+      apt:
+        name: linux-base
+        state: latest
+      when: ansible_distribution == 'Debian'
+
+    - name: Permitir que los usuarios corran perf sin limites (potencialmente inseguro)
+      sysctl:
+        name: kernel.perf_event_paranoid
+        value: '-1'
+        sysctl_set: yes
+        state: present
+
